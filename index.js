@@ -27,6 +27,44 @@ class AVLTree {
         node.balanceFactor = this.#getHeight(node.rightChild) - this.#getHeight(node.leftChild);
     }
 
+
+    buildTree(array) {
+        //Given an array of numbers, builds a self balancing AVL Tree
+
+        array.forEach(item => {
+            this.insert(item);
+        })
+
+        return this.root;
+
+    }
+
+    find(value) {
+        //Finds the node with the value or otherwise returns null
+        console.log(`looking for the node with value ${value}`)
+        if(!this.root) {
+            return null
+        }
+        let currentNode = this.root;
+
+        while(currentNode) {
+            // console.log(currentNode)
+            if(currentNode.value === value) {
+                return currentNode;
+            }
+
+            currentNode = currentNode.value < value? currentNode.rightChild: currentNode.leftChild;
+        }
+        // console.log('we hit here')
+        return null;
+    }
+
+
+    height(value) {
+        //Finds the node with the matching value and returns the height of it, otherwise returns null
+        const node = this.find(value);
+        return node? node.height: null
+    }
     traverseToLeaf(value){
         //Traverses the tree starting from the root, until a match is found
         //returns a stack (array) of the traversal where the first item is the root
@@ -189,15 +227,7 @@ class AVLTree {
             throw new Error('something has gone wrong this cant be the case');
         }
 
-
-
-
-
-
     }
-
-
-
 
 }
 
@@ -206,12 +236,28 @@ class AVLTree {
 
 const myTree = new AVLTree();
 
-myTree.insert(50);
-myTree.insert(40);
-myTree.insert(35);
+myTree.buildTree([30, 40, 50, 100, 125, 10, 5, 41, 51, 42]);
 // myTree.insert(100);
 // myTree.insert(125);
 // myTree.insert(130);
 // myTree.insert(120);
 
+
 console.log(myTree)
+
+
+const prettyPrint = (node, prefix = '', isLeft = true) => {
+  if (node === null) {
+    return;
+  }
+  if (node.right !== null) {
+    prettyPrint(node.rightChild, `${prefix}${isLeft ? '│   ' : '    '}`, false);
+  }
+  console.log(`${prefix}${isLeft ? '└── ' : '┌── '}${node.value}`);
+  if (node.left !== null) {
+    prettyPrint(node.leftChild, `${prefix}${isLeft ? '    ' : '│   '}`, true);
+  }
+};
+
+
+prettyPrint(myTree.root)
