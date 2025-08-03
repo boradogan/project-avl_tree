@@ -65,7 +65,7 @@ class AVLTree {
         const node = this.find(value);
         return node? node.height: null
     }
-    traverseToLeaf(value){
+    traverseToLeaf(value, startingRoot = this.root){
         //Traverses the tree starting from the root, until a match is found
         //returns a stack (array) of the traversal where the first item is the root
         // and the last item is the leaf or the node that a match is found
@@ -74,12 +74,13 @@ class AVLTree {
             return traverseStack;
         }
 
-        let currentNode = this.root;
+        let currentNode = startingRoot;
         while(currentNode) {
             traverseStack.push(currentNode);
             if(currentNode.value === value) {
                 console.log('match is found terminating the traversal');
-                return traverseStack;
+                // return traverseStack;
+                break;
             }
 
             //console.log(currentNode);
@@ -92,6 +93,134 @@ class AVLTree {
         })
         return traverseStack
 
+    }
+
+
+    delete(value, startingNode = this.root) {
+        if(!startingNode) {
+            console.log("The subtree is empty");
+        }
+        const traverseStack = this.traverseToLeaf(value, startingNode);
+        console.log('Traverse Stack', traverseStack)
+        traverseStack.forEach((node) => {
+            console.log(node.value);
+        })
+        if(traverseStack.length < 2) {
+            throw new Error('We are not handling this case yet');
+        }
+        const finalNode = traverseStack.pop();
+
+        if(finalNode.value != value) {
+            console.log('value not found')
+            return
+        } 
+        console.log('value found, proceeding to delete');
+        //Get the parent of the finalNode
+        const parentNode = traverseStack.at(-1);
+
+        //Case 1: if the node that we are going to delete has no children
+        if(!finalNode.leftChild && !finalNode.rightChild) {
+            console.log('The node to be delted has no children')
+
+            if(finalNode === parentNode.rightChild) {
+                parentNode.rightChild = null;
+            } else if(finalNode === parentNode.leftChild) {
+                parentNode.leftChild = null;
+            } else {
+                throw new Error('this shouldnt have happened');
+            }
+
+
+        }    
+
+        //Case 2: if the node has only one children
+        if(finalNode.rightChild && !finalNode.leftChild) {
+            if(finalNode === parentNode.rightChild) {
+                parentNode.rightChild = finalNode.rightChild;
+            } else if (finalNode === parentNode.leftChild) {
+                parentNode.leftChild = finalNode.rightChild;
+            } else {
+                throw new Error('this shouldnt have happened');
+            }
+        }
+
+        if(!finalNode.rightChild && finalNode.leftChild) {
+            if(finalNode === parentNode.rightChild) {
+                parentNode.rightChild = finalNode.leftChild;
+            } else if (finalNode === parentNode.leftChild) {
+                parentNode.leftChild = finalNode.leftChild;
+            } else {
+                throw new Error('this shouldnt have happened');
+            }
+        }
+
+
+        //Case 3: if the node has both children (hardest case)
+        if(finalNode.rightChild && finalNode.leftChild) {
+            const traverseToSuccessor = this.findInlineSuccessor(finalNode);
+            const successor = traverseToSuccessor.at(-1);
+            const successorValue = successor.value;
+            console.log("CAlling second delete", finalNode.value)
+            this.delete(successorValue, finalNode);
+            finalNode.value = successorValue;
+            // console.log('not deleting it yet')
+        }
+
+        console.log('Traverse Stack', traverseStack)
+        traverseStack.forEach((node) => {
+            console.log(node.value);
+        })
+        this.#propagateBackRebalance(traverseStack);
+
+
+    }
+    findInlineSuccessor(node) {
+        //Starting from the node, find inline successor (the smallest node greater than the node)
+        if(!node || !node.value) {
+            throw new Error('node must be non empty')
+        }
+        const value = node.value;
+        if(!node.rightChild) {
+
+            throw new Error('no inline successor')
+            return null;
+        }
+        const traverseStack = [node];
+        let currentNode = node.rightChild;
+        let successorCandidate = currentNode;
+
+        while(currentNode) {
+            traverseStack.push(currentNode);
+            if(currentNode.value > value) {
+                successorCandidate = successorCandidate.value > currentNode.value? currentNode: successorCandidate;
+            }
+            currentNode = currentNode.value < value? currentNode.rightChild : currentNode.leftChild;
+
+        }
+        console.log('Traverse Stack', traverseStack)
+        traverseStack.forEach((node) => {
+            console.log(node.value);
+        })
+        return traverseStack;
+
+
+    }
+
+    #propagateBackRebalance(traverseStack) {
+        //Given a traversal stack, propagates back to the first node while rebalancing at each step
+
+        while(traverseStack.length) {
+            const lastNode = traverseStack.pop();
+            // console.log(traverseStack)
+            // console.log(lastNode)
+            this.#updateHeightAndBalance(lastNode);
+            
+            //update the subtree, using the appropriate rotations,
+            //  if there is still nodes left in the stack the last one has to be the parent of the lastNode
+
+            this.updateSubTree(lastNode, traverseStack.length? traverseStack.at(-1): null);
+
+        }
     }
 
     insert(value) {
@@ -124,18 +253,18 @@ class AVLTree {
 
         //We now traverse back until the traverseStack is empty, updating the heights and baalnce factors
         // of the nodes accordingly and rebalancing the tree when necessary
-        
-        while(traverseStack.length) {
-            const lastNode = traverseStack.pop();
-            // console.log(traverseStack)
-            // console.log(lastNode)
-            this.#updateHeightAndBalance(lastNode);
+        this.#propagateBackRebalance(traverseStack);
+        // while(traverseStack.length) {
+        //     const lastNode = traverseStack.pop();
+        //     // console.log(traverseStack)
+        //     // console.log(lastNode)
+        //     this.#updateHeightAndBalance(lastNode);
             
-            //update the subtree, using the appropriate rotations,
-            //  if there is still nodes left in the stack the last one has to be the parent of the lastNode
-            this.updateSubTree(lastNode, traverseStack.length? traverseStack.at(-1): null);
+        //     //update the subtree, using the appropriate rotations,
+        //     //  if there is still nodes left in the stack the last one has to be the parent of the lastNode
+        //     this.updateSubTree(lastNode, traverseStack.length? traverseStack.at(-1): null);
 
-        }
+        // }
     }
     #updateHeightAndBalance(node){
         this.#updateHeight(node);
@@ -219,6 +348,7 @@ class AVLTree {
         }
         //In the typical case that the subtree is not the whole tree,
         //attach the updated subtree to its parent
+        // prettyPrint(this.root)
         if(oldRoot === currentSubTreeParent.leftChild) {
             currentSubTreeParent.leftChild = newRoot;
         } else if(oldRoot === currentSubTreeParent.rightChild) {
@@ -236,7 +366,7 @@ class AVLTree {
 
 const myTree = new AVLTree();
 
-myTree.buildTree([30, 40, 50, 100, 125, 10, 5, 41, 51, 42]);
+myTree.buildTree([5, 3, 8, 7, 1, 9.5, 6, 4]);
 // myTree.insert(100);
 // myTree.insert(125);
 // myTree.insert(130);
@@ -250,14 +380,17 @@ const prettyPrint = (node, prefix = '', isLeft = true) => {
   if (node === null) {
     return;
   }
-  if (node.right !== null) {
+  if (node.rightChild !== null) {
     prettyPrint(node.rightChild, `${prefix}${isLeft ? '│   ' : '    '}`, false);
   }
   console.log(`${prefix}${isLeft ? '└── ' : '┌── '}${node.value}`);
-  if (node.left !== null) {
+  if (node.leftChild !== null) {
     prettyPrint(node.leftChild, `${prefix}${isLeft ? '    ' : '│   '}`, true);
   }
 };
 
 
 prettyPrint(myTree.root)
+myTree.delete(8)
+console.log(myTree)
+
